@@ -22,8 +22,45 @@ export class OAuth2ClientPluginWeb extends WebPlugin implements OAuth2ClientPlug
      * Get a new access token using an existing refresh token.
      */
     async refreshToken(options: OAuth2RefreshTokenOptions): Promise<any> {
+        function createRequestData(options: OAuth2RefreshTokenOptions): string {
+            let body = "";
+            body += encodeURIComponent('client_id') + "="+encodeURIComponent(options.appId) + "&";
+            body += encodeURIComponent('grant_type') + "="+ encodeURIComponent("refresh_token") + "&";
+            body += encodeURIComponent("refresh_token") + "=" + encodeURIComponent(options.refreshToken);
+            if (options.scope) {
+                body += "&" + encodeURIComponent('scope') + "=" + encodeURIComponent(options.scope);
+            }
+            return body;
+        }
+
         return new Promise<any>((resolve, reject) => {
-            reject(new Error("Functionality not implemented for PWAs yet"));
+            // reject(new Error("Functionality not implemented for PWAs yet"));
+            if (!options.appId || options.appId.length == 0) {
+                reject(new Error("ERR_PARAM_NO_APP_ID"));
+            } else if (!options.accessTokenEndpoint || options.accessTokenEndpoint.length == 0) {
+                reject(new Error("ERR_PARAM_NO_ACCESS_TOKEN_ENDPOINT"))
+            } else if (!options.refreshToken || options.refreshToken.length == 0) {
+                reject(new Error("ERR_PARAM_NO_REFRESH_TOKEN"))
+            } else {
+                const request = new XMLHttpRequest();
+                request.onload = function() {
+                    if (this.status === 200) {
+                        const response = JSON.parse(this.response);
+                        resolve(response);
+                    } else {
+                        reject(this.response);
+                    }
+                };
+                request.onerror = function () {
+                    console.log("ERR_GENERAL: See client logs. It might be CORS. Status text: " + this.statusText);
+                    reject(new Error("ERR_GENERAL"));
+                };
+                request.open("POST", options.accessTokenEndpoint, true);
+                request.setRequestHeader('accept', 'application/json');
+                request.setRequestHeader('cache-control', 'no-cache');
+                request.setRequestHeader('content-type', 'application/x-www-form-urlencoded');
+                request.send(createRequestData(options));
+            }
         });
     }
 
@@ -121,6 +158,7 @@ export class OAuth2ClientPluginWeb extends WebPlugin implements OAuth2ClientPlug
                         let resp = JSON.parse(this.response);
                         if (resp) {
                             resp["access_token"] = tokenObj.access_token;
+                            resp["refresh_token"] = tokenObj.refresh_token;
                         }
                         resolve(resp);
                     } else {
