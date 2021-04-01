@@ -12,6 +12,7 @@ public class OAuth2ClientPlugin: CAPPlugin {
     var savedPluginCall: CAPPluginCall?
     
     let JSON_KEY_ACCESS_TOKEN = "access_token"
+    let JSON_KEY_REFRESH_TOKEN = "refresh_token"
     
     let PARAM_REFRESH_TOKEN = "refreshToken"
     
@@ -345,6 +346,7 @@ public class OAuth2ClientPlugin: CAPPlugin {
                                 var jsonObj = try JSONSerialization.jsonObject(with: response.data, options: []) as! JSObject
                                 // send the access token to the caller so e.g. it can be stored on a backend
                                 jsonObj.updateValue(credential.oauthToken, forKey: self.JSON_KEY_ACCESS_TOKEN)
+                                jsonObj.updateValue(credential.oauthRefreshToken, forKey: self.JSON_KEY_REFRESH_TOKEN)
                                 call.resolve(jsonObj)
                             } catch {
                                 self.log("Invalid json in resource response \(error.localizedDescription)")
