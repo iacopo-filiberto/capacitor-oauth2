@@ -24,9 +24,13 @@ import net.openid.appauth.TokenRequest;
 
 import org.json.JSONException;
 
-import java.net.HttpURLConnection;
+import java.io.IOException;
+import java.io.OutputStream;
 import java.net.URL;
 import java.util.Map;
+import java.util.Objects;
+
+import javax.net.ssl.HttpsURLConnection;
 
 @NativePlugin(requestCodes = {OAuth2ClientPlugin.REQ_OAUTH_AUTHORIZATION}, name = "OAuth2Client")
 public class OAuth2ClientPlugin extends Plugin {
