@@ -24,6 +24,8 @@ import net.openid.appauth.TokenRequest;
 
 import org.json.JSONException;
 
+import java.net.HttpURLConnection;
+import java.net.URL;
 import java.util.Map;
 
 @NativePlugin(requestCodes = {OAuth2ClientPlugin.REQ_OAUTH_AUTHORIZATION}, name = "OAuth2Client")
@@ -41,6 +43,7 @@ public class OAuth2ClientPlugin extends Plugin {
     private static final String PARAM_ACCESS_TOKEN_ENDPOINT = "accessTokenEndpoint";
     private static final String PARAM_PKCE_ENABLED = "pkceEnabled";
     private static final String PARAM_RESOURCE_URL = "resourceUrl";
+    private static final String PARAM_LOGOUT_URL = "logoutUrl";
     private static final String PARAM_ADDITIONAL_PARAMETERS = "additionalParameters";
     private static final String PARAM_ANDROID_CUSTOM_HANDLER_CLASS = "android.customHandlerClass";
     // Activity result handling
@@ -277,6 +280,7 @@ public class OAuth2ClientPlugin extends Plugin {
 
     @PluginMethod()
     public void logout(final PluginCall call) {
+        oauth2Options = buildAuthenticateOptions(call.getData());
         String customHandlerClassname = ConfigUtils.getParam(String.class, call.getData(), PARAM_ANDROID_CUSTOM_HANDLER_CLASS);
         if (customHandlerClassname != null && customHandlerClassname.length() > 0) {
             try {
@@ -294,6 +298,63 @@ public class OAuth2ClientPlugin extends Plugin {
                 call.reject(ERR_GENERAL, e);
             }
         } else {
+            Uri authorizationUri = Uri.parse(oauth2Options.getAuthorizationBaseUrl());
+            Uri accessTokenUri;
+            if (oauth2Options.getAccessTokenEndpoint() != null) {
+                accessTokenUri = Uri.parse(oauth2Options.getAccessTokenEndpoint());
+            } else {
+                // appAuth does not allow to be the accessTokenUri empty although it is not used unit performTokenRequest
+                accessTokenUri = authorizationUri;
+            }
+
+            AuthorizationServiceConfiguration config = new AuthorizationServiceConfiguration(authorizationUri, accessTokenUri);
+
+            if (this.authState == null) {
+                this.authState = new AuthState(config);
+            }
+
+            if (authState.getAccessToken() == null) {
+                call.reject(ERR_GENERAL, "access token cannot be null");
+                return;
+            }
+
+            if (authState.getRefreshToken() == null) {
+                call.reject(ERR_GENERAL, "refresh token cannot be null");
+                return;
+            }
+
+            HttpsURLConnection con = null;
+
+            try {
+                URL url = new URL(oauth2Options.getLogoutUrl());
+                con = (HttpsURLConnection) url.openConnection();
+                con.setRequestMethod("POST");
+                con.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
+                con.setRequestProperty("Accept", "application/json");
+                con.setRequestProperty("Authorization", "Bearer "+authState.getAccessToken());
+                con.setDoOutput(true);
+
+                String jsonInputString = "client_id={clientId}&refresh_token={refreshToken}"
+                    .replace("{clientId}", oauth2Options.getAppId())
+                    .replace("{refreshToken}", Objects.requireNonNull(authState.getRefreshToken()));
+
+                try (OutputStream os = con.getOutputStream()) {
+                    byte[] input = jsonInputString.getBytes("utf-8");
+                    os.write(input, 0, input.length);
+                }
+
+                if (con.getResponseCode() >= 400) {
+                    call.reject(ERR_GENERAL, "call to logout endpoint failed with code " + con.getResponseCode());
+                    return;
+                }
+            } catch (IOException e) {
+                call.reject(ERR_GENERAL, e);
+                return;
+            } finally {
+                if (con != null)
+                    con.disconnect();
+            }
+
             this.disposeAuthService();
             this.discardAuthState();
             call.resolve();

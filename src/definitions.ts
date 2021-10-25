@@ -97,6 +97,8 @@ export interface OAuth2AuthenticateBaseOptions {
      * Additional parameters for the created authorization url
      */
     additionalParameters?: { [key: string]: string }
+
+    logoutUrl?: string;
 }
 
 export interface OAuth2AuthenticateOptions extends OAuth2AuthenticateBaseOptions {

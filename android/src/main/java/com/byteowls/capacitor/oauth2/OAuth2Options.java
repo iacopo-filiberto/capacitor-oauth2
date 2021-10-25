@@ -14,6 +14,8 @@ public class OAuth2Options {
     private String responseType;
     private String redirectUrl;
 
+    private String logoutUrl;
+
     private String scope;
     private String state;
 
@@ -34,6 +36,9 @@ public class OAuth2Options {
     private String prompt;
     private String responseMode;
 
+    public String getLogoutUrl() { return logoutUrl; }
+
+    public void setLogoutUrl(String logoutUrl) { this.logoutUrl = logoutUrl; }
 
     public String getAppId() {
         return appId;
