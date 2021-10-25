@@ -1,6 +1,6 @@
 {
     "name": "@byteowls/capacitor-oauth2",
-    "version": "2.1.1-FILI",
+    "version": "2.1.2-FILI",
     "description": "Simple Capacitor OAuth 2 client plugin",
     "author": "Michael Oberwasserlechner",
     "homepage": "https://github.com/iacopo-filiberto/capacitor-oauth2",
