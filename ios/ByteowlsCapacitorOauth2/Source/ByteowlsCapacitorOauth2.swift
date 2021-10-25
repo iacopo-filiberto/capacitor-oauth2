@@ -332,11 +332,11 @@ public class OAuth2ClientPlugin: CAPPlugin {
                 return
             }
 
-            guard let authToken = self.oauthSwift?.client.credential.oauthToken else {
+            guard let authToken = self.oauthSwift?.client.credential.oauthToken ?? getString(call, "accessToken") else {
                 call.reject(ERR_GENERAL, "authToken cannot be nil")
                 return
             }
-            guard let refreshToken = self.oauthSwift?.client.credential.oauthRefreshToken else {
+            guard let refreshToken = self.oauthSwift?.client.credential.oauthRefreshToken ?? getString(call, "refreshToken") else {
                 call.reject(ERR_GENERAL, "refreshToken cannot be nil")
                 return
             }
@@ -636,7 +636,5 @@ extension OAuth2ClientPlugin: ASAuthorizationControllerDelegate {
             self.savedPluginCall?.reject(self.ERR_GENERAL)
         }
     }
-
-
 
 }

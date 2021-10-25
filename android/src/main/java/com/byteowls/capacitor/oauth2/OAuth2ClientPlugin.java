@@ -28,7 +28,6 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.net.URL;
 import java.util.Map;
-import java.util.Objects;
 
 import javax.net.ssl.HttpsURLConnection;
 
@@ -302,6 +301,8 @@ public class OAuth2ClientPlugin extends Plugin {
                 call.reject(ERR_GENERAL, e);
             }
         } else {
+            this.authService = new AuthorizationService(getContext());
+
             Uri authorizationUri = Uri.parse(oauth2Options.getAuthorizationBaseUrl());
             Uri accessTokenUri;
             if (oauth2Options.getAccessTokenEndpoint() != null) {
@@ -317,14 +318,32 @@ public class OAuth2ClientPlugin extends Plugin {
                 this.authState = new AuthState(config);
             }
 
+            String accessToken = null;
+
             if (authState.getAccessToken() == null) {
-                call.reject(ERR_GENERAL, "access token cannot be null");
-                return;
+                String tempAccessToken = ConfigUtils.getParam(String.class, call.getData(), "accessToken");
+                if (tempAccessToken == null) {
+                    call.reject(ERR_GENERAL, "access token cannot be null");
+                    return;
+                } else {
+                    accessToken = tempAccessToken;
+                }
+            } else {
+                accessToken = authState.getAccessToken();
             }
 
+            String refreshToken = null;
+
             if (authState.getRefreshToken() == null) {
-                call.reject(ERR_GENERAL, "refresh token cannot be null");
-                return;
+                String tempRefreshToken = ConfigUtils.getParam(String.class, call.getData(), "refreshToken");
+                if (tempRefreshToken == null) {
+                    call.reject(ERR_GENERAL, "refresh token cannot be null");
+                    return;
+                } else {
+                    refreshToken = tempRefreshToken;
+                }
+            } else {
+                refreshToken = authState.getRefreshToken();
             }
 
             HttpsURLConnection con = null;
@@ -335,12 +354,12 @@ public class OAuth2ClientPlugin extends Plugin {
                 con.setRequestMethod("POST");
                 con.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
                 con.setRequestProperty("Accept", "application/json");
-                con.setRequestProperty("Authorization", "Bearer "+authState.getAccessToken());
+                con.setRequestProperty("Authorization", "Bearer " + accessToken);
                 con.setDoOutput(true);
 
                 String jsonInputString = "client_id={clientId}&refresh_token={refreshToken}"
                     .replace("{clientId}", oauth2Options.getAppId())
-                    .replace("{refreshToken}", Objects.requireNonNull(authState.getRefreshToken()));
+                    .replace("{refreshToken}", refreshToken);
 
                 try (OutputStream os = con.getOutputStream()) {
                     byte[] input = jsonInputString.getBytes("utf-8");
@@ -476,6 +495,7 @@ public class OAuth2ClientPlugin extends Plugin {
         o.setAuthorizationBaseUrl(ConfigUtils.trimToNull(ConfigUtils.getOverwrittenAndroidParam(String.class, callData, PARAM_AUTHORIZATION_BASE_URL)));
         o.setResponseType(ConfigUtils.trimToNull(ConfigUtils.getOverwrittenAndroidParam(String.class, callData, PARAM_RESPONSE_TYPE)));
         o.setRedirectUrl(ConfigUtils.trimToNull(ConfigUtils.getOverwrittenAndroidParam(String.class, callData, PARAM_REDIRECT_URL)));
+        o.setLogoutUrl(ConfigUtils.trimToNull(ConfigUtils.getOverwrittenAndroidParam(String.class, callData, PARAM_LOGOUT_URL)));
 
         // optional
         o.setResourceUrl(ConfigUtils.trimToNull(ConfigUtils.getOverwrittenAndroidParam(String.class, callData, PARAM_RESOURCE_URL)));
